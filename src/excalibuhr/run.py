@@ -25,13 +25,10 @@ ppl.cal_flat_trace(debug=False)
 ppl.cal_slit_curve(key_wave_min='ESO INS WLEN BEGIN', 
 				   key_wave_max='ESO INS WLEN END', 
 				   key_wave_cen='ESO INS WLEN CENY', 
-				   debug=True
+				   debug=False
 				   )
 ppl.cal_flat_norm(debug=False)
-#"""
-ppl.obs_nodding(debug=True)
-"""
+ppl.obs_nodding(debug=False)
 ppl.obs_nodding_combine()
-ppl.extract1d_nodding(companion_sep=1.7, debug=False)
-"""
-
+#"""
+ppl.extract1d_nodding(slit_frac_to_extract={'A':[0.2, 0.8], 'B':[0.8, 0.2]}, debug=False)

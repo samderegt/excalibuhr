@@ -701,7 +701,8 @@ class Pipeline:
                 su.wfits(file_name, combined, hdr, im_err=combined_err)
                 self.add_to_product("./obs_nodding/"+'Nodding_combined_{}_{}.fits'.format(pos, item_wlen), "NODDING_COMBINED")
 
-    def extract1d_nodding(self, companion_sep=None, debug=False):    
+    def extract1d_nodding(self, #companion_sep=None, 
+                          debug=False, slit_frac_to_extract={'A':[0.2], 'B':[0.8]}):
         
         # Create the obs_nodding directory if it does not exist yet
         self.noddingpath = os.path.join(self.outpath, "obs_nodding")
@@ -775,13 +776,17 @@ class Pipeline:
                 nodthrow = hdr[self.key_nodthrow]
                 slitlen = hdr[self.key_slitlen]
                 # Slit-fraction of centered for the nod-throw
-                f0 = 0.5 + nod*nodthrow/2./slitlen
+                #f0 = 0.5 + nod*nodthrow/2./slitlen
                 
                 # hdu_ref = fits.open('/mnt/media/data/Users/yzhang/Projects/2M0103_CRIRES/2021-10-16/product/obs_nodding/cr2res_obs_nodding_combinedA_000.fits')
                 # dt_err = [hdu_ref[2].data/2., hdu_ref[4].data/2., hdu_ref[6].data/2.]
-                if companion_sep is None:
-                    # The slit is centered on the target
-                    print("Location of target on slit: ", f0)
+                assert (len(slit_frac_to_extract[pos]) < 3), "Too many slit fractions to extract."
+
+                if len(slit_frac_to_extract[pos]) == 1:
+
+                    # Only 1 target on the slit
+                    f0 = slit_frac_to_extract[pos][0]
+                    print("Location of target on the slit: {0:.3f}".format(f0))
                     
                     # Extract a 1D spectrum for the target
                     flux_pri, err_pri = su.util_extract_spec(dt, dt_err, bpm, tw, slit, blaze, aper_half=20, 
@@ -790,16 +795,18 @@ class Pipeline:
                     file_name = os.path.join(self.noddingpath, 'Extr1D_Nodding_combined_{}_{}_{}.fits'.format(pos, item_wlen, 'PRIMARY'))
                     su.wfits(file_name, flux_pri, hdr, im_err=err_pri)
                     self.add_to_product("./obs_nodding/"+'Extr1D_Nodding_combined_{}_{}_{}.fits'.format(pos, item_wlen, 'PRIMARY'), "Extr1D_PRIMARY")
-                else:
-                    # The slit is centered on the star, not the companion
-                    f1 = f0 - companion_sep/slitlen
-                    print("Location of star and companion: {0:.3f}, {1:.3f}".format(f0, f1))
+                
+                elif len(slit_frac_to_extract[pos]) == 2:
+
+                    # 2 targets on the slit
+                    f0, f1 = slit_frac_to_extract[pos]
+                    print("Location of targets on the slit: {0:.3f}, {1:.3f}".format(f0, f1))
 
                     # Extract a 1D spectrum for the primary and secondary targets
-                    flux_sec, err_sec = su.util_extract_spec(dt, dt_err, bpm, tw, slit, blaze, 
-                                                             gains=self.gain, f0=f1, aper_half=20, debug=debug)
-                    flux_pri, err_pri = su.util_extract_spec(dt, dt_err, bpm, tw, slit, blaze, 
-                                                             gains=self.gain, aper_half=20, f0=f0, debug=debug)
+                    flux_pri, err_pri = su.util_extract_spec(dt, dt_err, bpm, tw, slit, blaze, gains=self.gain, 
+                                                             f0=f0, aper_half=20, debug=debug)
+                    flux_sec, err_sec = su.util_extract_spec(dt, dt_err, bpm, tw, slit, blaze, gains=self.gain, 
+                                                             f0=f1, aper_half=20, debug=debug)
 
                     file_name = os.path.join(self.noddingpath, 'Extr1D_Nodding_combined_{}_{}_{}.fits'.format(pos, item_wlen, 'PRIMARY'))
                     su.wfits(file_name, flux_pri, hdr, im_err=err_pri)
@@ -808,10 +815,6 @@ class Pipeline:
                     file_name = os.path.join(self.noddingpath, 'Extr1D_Nodding_combined_{}_{}_{}.fits'.format(pos, item_wlen, 'SECONDARY'))
                     su.wfits(file_name, flux_sec, hdr, im_err=err_sec)
                     self.add_to_product("./obs_nodding/"+'Extr1D_Nodding_combined_{}_{}_{}.fits'.format(pos, item_wlen, 'SECONDARY'), "Extr1D_SECONDARY")
-                
-                # TODO: Slit is not centered on any source
-                # ...
-                # What aperture size???
 
 
     def refine_wlen_solution(self, debug=False):    
